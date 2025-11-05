@@ -2,7 +2,7 @@
 import React from "react";
 import ImageSearchClient from "./components/ImageSearchClient";
 
-async function postItem(payload: { title: string; type: string; sourceUrl: string }) {
+async function postItem(payload: { title: string; type: string; sourceUrl: string; thumbnail?: string }) {
   return fetch("/api/upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -16,10 +16,7 @@ export default function Page() {
       <h1>Busca-Croch-2.0</h1>
       <section style={{ marginBottom: 20 }}>
         <h3>Adicionar item (teste rápido)</h3>
-        <AddItemForm onAdded={() => {
-          // reload will be handled by client component's initial fetch; a simple page reload keeps it simple
-          window.location.reload();
-        }} />
+        <AddItemForm onAdded={() => { window.location.reload(); }} />
       </section>
       <ImageSearchClient />
     </main>
@@ -30,14 +27,16 @@ function AddItemForm({ onAdded }: { onAdded: () => void }) {
   const [title, setTitle] = React.useState("");
   const [type, setType] = React.useState("video");
   const [sourceUrl, setSourceUrl] = React.useState("");
+  const [thumbnail, setThumbnail] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await postItem({ title, type, sourceUrl });
+      const res = await postItem({ title, type, sourceUrl, thumbnail: thumbnail || undefined });
       if (res?.ok) {
-        setTitle(""); setSourceUrl("");
+        setTitle(""); setSourceUrl(""); setThumbnail("");
         onAdded();
       } else {
         alert("Erro: " + (res?.error || "desconhecido"));
@@ -48,6 +47,7 @@ function AddItemForm({ onAdded }: { onAdded: () => void }) {
       setLoading(false);
     }
   }
+
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 720 }}>
       <input placeholder="Título (ex: Receita Bolsa X)" value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -58,6 +58,7 @@ function AddItemForm({ onAdded }: { onAdded: () => void }) {
         <option value="other">other</option>
       </select>
       <input placeholder="URL da origem (YouTube, link do PDF ou página)" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} required />
+      <input placeholder="Nome do arquivo de miniatura em public/thumbnails (opcional) ou URL" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} />
       <div>
         <button type="submit" disabled={loading}>{loading ? "Enviando..." : "Enviar"}</button>
       </div>
