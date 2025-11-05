@@ -35,8 +35,9 @@ export default function ImageSearchClient() {
   }, []);
 
   return (
-    <div style={{ padding: 16, maxWidth: 900, margin: "0 auto" }}>
-      <h2>Busca - Busca-Croch</h2>
+    <div style={{ padding: 16, maxWidth: 1000, margin: "0 auto" }}>
+      <h2 style={{ marginBottom: 8 }}>Busca - Busca-Croch-2.0</h2>
+
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <input
           placeholder="Pesquisar título ou tipo..."
@@ -47,6 +48,9 @@ export default function ImageSearchClient() {
         <button onClick={() => fetchItems(q)} style={{ padding: "8px 12px", borderRadius: 6 }}>
           Buscar
         </button>
+        <button onClick={() => { setQ(""); fetchItems(""); }} style={{ padding: "8px 12px", borderRadius: 6 }}>
+          Limpar
+        </button>
       </div>
 
       {loading ? <div>Carregando...</div> : null}
@@ -56,9 +60,6 @@ export default function ImageSearchClient() {
           <div key={it.id} style={{ border: "1px solid #eee", padding: 8, borderRadius: 8, background: "#fff" }}>
             <div style={{ width: "100%", height: 140, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 6, background: "#f8f8f8" }}>
               {it.thumbnailUrl ? (
-                // imagem pode ser /thumbnails/arquivo.png (local) ou URL externa
-                // se for caminho relativo, o browser resolve automaticamente
-                // largura máxima para responsividade
                 <img src={it.thumbnailUrl} alt={it.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 <div style={{ color: "#888" }}>Sem miniatura</div>
