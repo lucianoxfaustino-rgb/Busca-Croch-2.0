@@ -1,11 +1,9 @@
 // app/api/upload/route.ts
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import vision from "../../../server/vision";
 
-const DB_PATH = path.join(process.cwd(), "data", "items.json");
+const DB_PATH = path.join(process.cwd(), "app", "data", "items.json");
 
 async function readDb() {
   try {
@@ -20,31 +18,24 @@ async function writeDb(items: any[]) {
   await fs.writeFile(DB_PATH, JSON.stringify(items, null, 2), "utf-8");
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, type, sourceUrl } = body;
+    const { title, type, sourceUrl, thumbnail } = body;
+
     if (!title || !type || !sourceUrl) {
       return NextResponse.json({ error: "title, type and sourceUrl are required" }, { status: 400 });
     }
 
-    // use vision util
-    const res = await vision.getOrCreateThumbnailForSource({
-      type: type,
-      sourceUrl,
-      filenamePrefix: type.replace(/\W+/g, "")
-    });
-
-    const thumbnailUrl = res?.url || null;
     const items = await readDb();
-    const id = (items.length ? (Number(items[items.length - 1].id) + 1) : 1).toString();
+    const nextId = items.length ? Number(items[items.length - 1].id) + 1 : 1;
     const item = {
-      id,
+      id: String(nextId),
       title,
       type,
       sourceUrl,
-      thumbnailUrl,
-      createdAt: new Date().toISOString()
+      thumbnail: thumbnail || null, // pode ser nome de arquivo em public/thumbnails ou URL externa
+      createdAt: new Date().toISOString(),
     };
     items.push(item);
     await writeDb(items);
