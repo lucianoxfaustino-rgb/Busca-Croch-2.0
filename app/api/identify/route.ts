@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
-      const file = form.get("image") as any; // <- 'any' evita erro de tipagem no build
+      const file = form.get("image") as any; // 'any' evita erro de tipo no build
       if (!file) return okJSON({ error: "Arquivo 'image' ausente" }, 400);
       const arrayBuffer = await file.arrayBuffer();
       const b64 = Buffer.from(arrayBuffer).toString("base64");
-      imageUrl = toDataURL(file.type || "image/jpeg", b64);
+      imageUrl = toDataURL(file.type || "image/jpeg", b64); // data URL inline
     } else {
       const body = await req.json().catch(()=>({}));
       if (body?.imageUrl && typeof body.imageUrl === "string") {
@@ -34,48 +34,42 @@ export async function POST(req: NextRequest) {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
     const system = `
-Você descreve imagens de CROCHÊ para busca.
-Saída (JSON) com:
-- tipo: "bolsa" | "blusa" | "tapete" | "sousplat" | "amigurumi" | "capa" | "outro"
-- pontos: string[] (ex.: "puff","alto","baixo","leque","pipoca","trançado")
-- estilo: string (ex.: "boho","praia","quadrado da vovó","geométrico")
-- materiais: string[] (ex.: "barbante","fio de malha","linha de algodão","alça de couro")
-- termos_busca: string[] (sinônimos PT-BR úteis p/ achar aulas e receitas)
-Responda SOMENTE JSON válido.`;
+Você descreve imagens de CROCHÊ para busca. Regras:
+- Responda SOMENTE com JSON válido (sem texto fora).
+- Estrutura:
+{
+  "tipo": "bolsa" | "blusa" | "tapete" | "sousplat" | "amigurumi" | "capa" | "outro",
+  "pontos": ["puff","alto","baixo","leque","pipoca","trançado", ...],
+  "estilo": "boho" | "praia" | "quadrado da vovó" | "geométrico" | "minimalista" | "clássico" | "outro",
+  "materiais": ["barbante","fio de malha","linha de algodão","alça de couro", ...],
+  "termos_busca": ["bolsa boho crochê ponto pipoca", ...]
+}
+`;
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.1,
+      messages: [
         { role: "system", content: system },
         {
           role: "user",
           content: [
-            { type: "input_text", text: "Analise a imagem e gere o JSON solicitado." },
-            { type: "input_image", image_url: imageUrl }
-          ]
+            { type: "text", text: "Analise a imagem e devolva o JSON solicitado." },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ] as any
         }
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "CrocheIdentify",
-          schema: {
-            type: "object",
-            properties: {
-              tipo: { type: "string" },
-              pontos: { type: "array", items: { type: "string" } },
-              estilo: { type: "string" },
-              materiais: { type: "array", items: { type: "string" } },
-              termos_busca: { type: "array", items: { type: "string" } }
-            },
-            required: ["tipo","pontos","termos_busca"],
-            additionalProperties: false
-          }
-        }
-      }
+      ]
     });
 
-    const out = JSON.parse(response.output_text!);
+    const text = completion.choices[0]?.message?.content?.trim() || "{}";
+    const jsonText = text.replace(/^```json\s*|\s*```$/g, "");
+    const out = JSON.parse(jsonText);
+
+    // Validação mínima
+    if (!out.tipo || !Array.isArray(out.pontos) || !Array.isArray(out.termos_busca)) {
+      return okJSON({ error: "Resposta inválida do modelo (faltam campos)." }, 500);
+    }
+
     return okJSON(out);
   } catch (err: any) {
     return okJSON({ error: err?.message || "Erro interno" }, 500);
