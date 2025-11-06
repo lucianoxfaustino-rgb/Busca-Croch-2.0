@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
-      const file = form.get("image") as any; // <- aqui: 'any' evita erro de tipo
+      const file = form.get("image") as any; // <- 'any' evita erro de tipagem no build
       if (!file) return okJSON({ error: "Arquivo 'image' ausente" }, 400);
       const arrayBuffer = await file.arrayBuffer();
       const b64 = Buffer.from(arrayBuffer).toString("base64");
