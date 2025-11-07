@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
-      const file = form.get("image") as any; // 'any' evita erro de tipo no build
+      const file = form.get("image") as any; // 'any' evita problema de tipos no build
       if (!file) return okJSON({ error: "Arquivo 'image' ausente" }, 400);
       const arrayBuffer = await file.arrayBuffer();
       const b64 = Buffer.from(arrayBuffer).toString("base64");
@@ -65,7 +65,6 @@ Você descreve imagens de CROCHÊ para busca. Regras:
     const jsonText = text.replace(/^```json\s*|\s*```$/g, "");
     const out = JSON.parse(jsonText);
 
-    // Validação mínima
     if (!out.tipo || !Array.isArray(out.pontos) || !Array.isArray(out.termos_busca)) {
       return okJSON({ error: "Resposta inválida do modelo (faltam campos)." }, 500);
     }
