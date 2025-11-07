@@ -14,15 +14,14 @@ export async function POST(req: NextRequest) {
     const system = `
 Você cria consultas curtas de busca (PT-BR) para crochê.
 Entrada: descritores (tipo, pontos, estilo, materiais, termos_busca).
-REGRAS IMPORTANTES:
-- Responda SOMENTE com um JSON válido, sem texto antes/depois.
-- Estrutura obrigatória:
+REGRAS:
+- Responda SOMENTE com JSON válido:
 {
-  "intent": "video" | "pdf" | "receita" | "misto",
+  "intent": "misto" | "video" | "pdf" | "receita",
   "query": "string",
   "entities": ["string", ...]
 }
-- Priorize termos BR: "ponto pipoca/puff", "barbante", etc.
+- Inclua termos brasileiros ("ponto pipoca/puff", "barbante", etc.).
 `;
 
     const completion = await client.chat.completions.create({
@@ -35,15 +34,12 @@ REGRAS IMPORTANTES:
     });
 
     const text = completion.choices[0]?.message?.content?.trim() || "{}";
-    // Tenta achar JSON mesmo se vier com code fence
     const jsonText = text.replace(/^```json\s*|\s*```$/g, "");
     const out = JSON.parse(jsonText);
 
-    // Validação mínima
     if (!out.intent || !out.query || !Array.isArray(out.entities)) {
       return okJSON({ error: "Resposta inválida do modelo (faltam campos)." }, 500);
     }
-
     return okJSON(out);
   } catch (err: any) {
     return okJSON({ error: err?.message || "Erro interno" }, 500);
